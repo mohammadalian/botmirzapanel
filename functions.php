@@ -78,30 +78,50 @@ function generateUUID() {
     return $uuid;
 }
 function tronratee(){
-    $tronrate = [];
-    $tronrate['results'] = [];
-    $requests = json_decode(file_get_contents('https://api.bitpin.ir/v1/mkt/currencies/'), true)['results'];
-    foreach($requests as  $request){
-        if($request['id'] == 15){
-            $tronrate['result']['TRX'] = $request['price_info']['price'];
-        }
-        if($request['id'] == 4){
-            $tronrate['result']['USD'] = $request['price_info']['price'];
-        }
-    }
-    return $tronrate;
+    return json_decode(file_get_contents('https://bot.melipayment.com/api/prices'), true);
+}
+function melipayment($price_amount , $wallet){
+    global $connect;
+    $apimelipayment = mysqli_fetch_assoc(mysqli_query($connect, "SELECT (ValuePay) FROM PaySetting WHERE NamePay = 'apimelipayment'"))['ValuePay'];
+
+    $curl = curl_init();
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => 'https://bot.melipayment.com/api/peyment',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_ENCODING => '',
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'POST',
+        CURLOPT_HTTPHEADER => array(
+            'Content-Type: application/json'
+        ),
+    ));
+    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode([
+        "token" => $apimelipayment,
+        "type" => "trx",
+        "count" => $price_amount,
+        "wallet" => $wallet,
+    ]));
+
+    $response = curl_exec($curl);
+    curl_close($curl);
+    return json_decode($response);
 }
 function nowPayments($payment, $price_amount, $order_id, $order_description){
-    $apinowpayments = select("PaySetting", "ValuePay", "NamePay", 'apinowpayment',"select")['ValuePay'];
+    global $connect;
+    $apinowpayments = mysqli_fetch_assoc(mysqli_query($connect, "SELECT (ValuePay) FROM PaySetting WHERE NamePay = 'apinowpayment'"))['ValuePay'];
     $curl = curl_init();
     curl_setopt_array($curl, array(
         CURLOPT_URL => 'https://api.nowpayments.io/v1/' . $payment,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT_MS => 4500,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_MAXREDIRS => 10,
         CURLOPT_ENCODING => '',
-        CURLOPT_SSL_VERIFYPEER => 1,
-        CURLOPT_SSL_VERIFYHOST => 2,
-        CURLOPT_POST => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'POST',
         CURLOPT_HTTPHEADER => array(
             'x-api-key:' . $apinowpayments,
             'Content-Type: application/json'
@@ -109,7 +129,7 @@ function nowPayments($payment, $price_amount, $order_id, $order_description){
     ));
     curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode([
         'price_amount' => $price_amount,
-        'price_currency' => 'usd',
+        'price_currency' => 'trx',
         'pay_currency' => 'trx',
         'order_id' => $order_id,
         'order_description' => $order_description,
@@ -120,7 +140,8 @@ function nowPayments($payment, $price_amount, $order_id, $order_description){
     return json_decode($response);
 }
 function StatusPayment($paymentid){
-    $apinowpayments = select("PaySetting", "ValuePay", "NamePay", 'apinowpayment',"select")['ValuePay'];
+    global $connect;
+    $apinowpayments = mysqli_fetch_assoc(mysqli_query($connect, "SELECT (ValuePay) FROM PaySetting WHERE NamePay = 'apinowpayment'"))['ValuePay'];
     $curl = curl_init();
     curl_setopt_array($curl, array(
         CURLOPT_URL => 'https://api.nowpayments.io/v1/payment/' . $paymentid,
@@ -140,3 +161,5 @@ function StatusPayment($paymentid){
     curl_close($curl);
     return $response;
 }
+
+
